@@ -24,27 +24,42 @@ jobs:
             set -e
             echo "🚀 Deployment Started"
 
+            # ================= PROJECT ROOT =================
             cd /home/sooraj/Work-Sheet-1
 
-            git pull origin main
+            echo "📂 Current Path:"
+            pwd
+            ls
+
+            # ================= GIT SYNC =================
+            echo "⬇️ Syncing latest code..."
+            git fetch origin
+            git reset --hard origin/main
 
             # ================= BACKEND =================
+            echo "📦 Setting up Backend"
             cd backend
 
             python3 -m venv venv || true
             venv/bin/pip install -r requirements.txt
 
             pm2 restart backend || pm2 start /home/sooraj/Work-Sheet-1/backend/venv/bin/uvicorn \
-            --name backend --interpreter none -- app.main:app --host 0.0.0.0 --port 5000
+            --name backend \
+            --interpreter none \
+            -- app.main:app --host 0.0.0.0 --port 5000
 
             # ================= FRONTEND =================
+            echo "🌐 Setting up Frontend"
             cd ../work-updates
 
             npm install
             npm run build
 
-            pm2 restart frontend || pm2 start npx --name frontend -- serve -s dist -l 4173
+            pm2 restart frontend || pm2 start npx \
+            --name frontend \
+            -- serve -s dist -l 4173
 
+            # ================= SAVE PM2 =================
             pm2 save
 
             echo "✅ Deployment Completed Successfully!"
