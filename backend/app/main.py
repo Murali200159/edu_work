@@ -25,6 +25,7 @@ logger = logging.getLogger(__name__)
 async def lifespan(app: FastAPI):
     logger.info("Initializing Database...")
     try:
+        # 1. Automatic Schema Creation (Essential for new systems)
         Base.metadata.create_all(bind=engine)
         logger.info("Database schemas verified.")
 
@@ -34,32 +35,34 @@ async def lifespan(app: FastAPI):
 
         db = SessionLocal()
         try:
-            admin_eid = "ADMIN-001"
+            admin_username = "admin"
+            admin_password = "admin123"
 
-            admin_user = db.query(User).filter(User.role == "admin").first()
+            # 2. Check if this specific admin exists
+            admin_user = db.query(User).filter(User.employee_id == admin_username).first()
 
             if admin_user:
-                logger.info("Found existing admin user, verifying configuration...")
-                admin_user.employee_id = admin_eid
+                logger.info(f"Admin '{admin_username}' exists. Refreshing security profile...")
+                admin_user.password_hash = get_password_hash(admin_password)
                 db.commit()
-                logger.info("Admin user verified.")
+                logger.info("Admin security profile successfully updated.")
             else:
-                logger.info("Creating default admin user...")
+                logger.info(f"Creating default admin user ({admin_username})...")
                 new_admin = User(
-                    name="Admin",
-                    employee_id=admin_eid,
-                    email="dilshajceo@dilshajinfotech.tech",
-                    password_hash=get_password_hash("admin@123"),
+                    name="Default Admin",
+                    employee_id=admin_username,
+                    email="admin@system.local",
+                    password_hash=get_password_hash(admin_password),
                     role="admin",
                     is_first_login=False
                 )
                 db.add(new_admin)
                 db.commit()
-                logger.info("Default admin user created.")
+                logger.info(f"Default admin '{admin_username}' successfully created.")
         finally:
             db.close()
     except Exception as e:
-        logger.error(f"Error executing schema verification: {e}")
+        logger.error(f"Error during system initialization: {e}")
     yield
     logger.info("Shutting down API Service...")
 

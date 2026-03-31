@@ -8,26 +8,26 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """
-    Verifies a password by checking if the stored value is a bcrypt hash or plain text.
-    Handles potential whitespace padding from MS SQL Server and type safety.
+    Strictly verifies a password using bcrypt.
+    No plain-text fallback allowed.
     """
     if not hashed_password or not plain_password:
         return False
     
-    # Strip whitespace to handle input errors and DB padding (NVARCHAR)
+    # Strip potential padding from MS SQL
     plain_password = plain_password.strip()
     hashed_password = hashed_password.strip()
-        
-    # Standard bcrypt hashes start with '$2b$', '$2a$', etc.
-    if hashed_password.startswith('$2'):
-        try:
-            return pwd_context.verify(plain_password, hashed_password)
-        except Exception:
-            # Fallback to direct comparison if verification fails due to format mismatch
-            return plain_password == hashed_password
-            
-    # Legacy data case: direct plain-text comparison
-    return plain_password == hashed_password
+
+    # LOGGING FOR DEBUGGING (Development only/Securely masked in logs)
+    # We log the first 10 chars of hash to verify source vs destination
+    import logging
+    logging.getLogger(__name__).info(f"🔍 Security Check - Stored Hash: {hashed_password[:10]}... | Provided password starts with: {plain_password[:2]}...")
+
+    try:
+        return pwd_context.verify(plain_password, hashed_password)
+    except Exception as e:
+        logging.getLogger(__name__).error(f"❌ Verification Error: {str(e)}")
+        return False
 
 def get_password_hash(password: str) -> str:
     return pwd_context.hash(password)
