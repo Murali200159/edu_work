@@ -30,13 +30,17 @@ class LoginResponse(UserResponse):
 def login(request: LoginRequest, db: Session = Depends(get_db)):
     """
     Authenticates a user from the SQL Server database.
-    If the database is empty, we handle the frontend's hardcoded mock fallback accounts 
-    just so the app remains usable until a real user is created.
+    Performs standard input cleaning (trimming) to avoid credential failure due to whitespace.
     """
-    logger.info(f"Login attempt for: email={request.email}, employee_id={request.employee_id} (password masked)")
-    user = authenticate_user(db, email=request.email, employee_id=request.employee_id, password=request.password)
+    email = request.email.strip() if request.email else None
+    employee_id = request.employee_id.strip() if request.employee_id else None
+    
+    logger.info(f"🔑 Login Attempt - Identifier: {email or employee_id} (Type: {'Email' if email else 'EmpID'})")
+    
+    user = authenticate_user(db, email=email, employee_id=employee_id, password=request.password)
     
     if not user:
+        logger.warning(f"❌ Login Failed - Identifier: {email or employee_id}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid credentials",

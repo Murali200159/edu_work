@@ -7,9 +7,16 @@ from app.core.config import settings
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-    """Verifies a password by checking if the stored value is a bcrypt hash or plain text."""
-    if not hashed_password:
+    """
+    Verifies a password by checking if the stored value is a bcrypt hash or plain text.
+    Handles potential whitespace padding from MS SQL Server and type safety.
+    """
+    if not hashed_password or not plain_password:
         return False
+    
+    # Strip whitespace to handle input errors and DB padding (NVARCHAR)
+    plain_password = plain_password.strip()
+    hashed_password = hashed_password.strip()
         
     # Standard bcrypt hashes start with '$2b$', '$2a$', etc.
     if hashed_password.startswith('$2'):
